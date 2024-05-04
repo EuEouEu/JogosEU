@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabulero</title>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f7f7f7;
+    }
+
+    .container {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(8, 70px);
+        grid-template-rows: repeat(8, 70px);
+        gap: 5px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        padding: 5px;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        background-color: #f3f3f3;
+    }
+    
+    .cell {
+        width: 70px;
+        height: 70px;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 36px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .selected {
+        opacity: 0.7;
+    }
+
+    .blocked {
+        background-color: #4a4a4a;
+        cursor: not-allowed;
+    }
+
+    #score {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 24px;
+        color: rgb(0, 0, 0);
+        z-index: 1;
+    }
+</style>
+</head>
+<body>
+
+<div class="container" id="gameBoard">
+    <div id="score">Score: 0</div>
+</div>
+
+<script>
+    const blockColors = ['#FF6666', '#FFCC66', '#66FF66', '#66CCFF', '#FF66CC'];
+
+    let blocks = [];
+    let previousColors = [];
+    let selectedBlock = null;
+    let score = 0;
+    let pointsPerCombo = 10;
+    const pointsLostPerMove = 10;
+    let comboMultiplier = 1;
+
+    function createGameBoard() {
+        const gameBoard = document.getElementById('gameBoard');
+        for (let row = 0; row < 8; row++) {
+            blocks[row] = [];
+            previousColors[row] = [];
+            for (let col = 0; col < 8; col++) {
+                const block = document.createElement('div');
+                block.className = 'cell';
+                if (Math.random() < 0.2) {
+                    block.classList.add('blocked');
+                    block.style.backgroundColor = '#4a4a4a';
+                } else {
+                    const randomColor = blockColors[Math.floor(Math.random() * blockColors.length)];
+                    block.style.backgroundColor = randomColor;
+                }
+                block.setAttribute('data-row', row);
+                block.setAttribute('data-col', col);
+                if (!block.classList.contains('blocked')) {
+                    block.addEventListener('click', () => selectBlock(row, col));
+                }
+                blocks[row][col] = block;
+                previousColors[row][col] = block.style.backgroundColor;
+                gameBoard.appendChild(block);
+            }
+        }
+    }
+
+    function selectBlock(row, col) {
+        if (!selectedBlock) {
+            selectedBlock = { row, col };
+            blocks[row][col].classList.add('selected');
+        } else {
+            if (Math.abs(selectedBlock.row - row) + Math.abs(selectedBlock.col - col) === 1) {
+                swapBlocks(selectedBlock.row, selectedBlock.col, row, col);
+                if (!checkMatches()) {
+                    setTimeout(() => {
+                        swapBlocks(selectedBlock.row, selectedBlock.col, row, col);
+                    }, 500);
+                    score -= pointsLostPerMove;
+                    updateScore();
+                }
+            }
+            blocks[selectedBlock.row][selectedBlock.col].classList.remove('selected');
+            selectedBlock = null;
+        }
+    }
+
+    function swapBlocks(row1, col1, row2, col2) {
+        const temp = blocks[row1][col1].style.backgroundColor;
+        blocks[row1][col1].style.backgroundColor = blocks[row2][col2].style.backgroundColor;
+        blocks[row2][col2].style.backgroundColor = temp;
+    }
+
+    function checkMatches() {
+        let matchFound = false;
+        
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 6; col++) {
+                if (blocks[row][col].style.backgroundColor === blocks[row][col + 1].style.backgroundColor &&
+                    blocks[row][col].style.backgroundColor === blocks[row][col + 2].style.backgroundColor) {
+                    matchFound = true;
+                    for (let i = 0; i < 3; i++) {
+                        blocks[row][col + i].style.backgroundColor = '#FFFFFF';
+                    }
+                    setTimeout(() => {
+                        for (let i = 0; i < 3; i++) {
+                            const randomColor = blockColors[Math.floor(Math.random() * blockColors.length)];
+                            blocks[row][col + i].style.backgroundColor = randomColor;
+                        }
+                    }, 500);
+                    score += pointsPerCombo * comboMultiplier;
+                    updateScore();
+                    comboMultiplier++;
+                }
+            }
+        }
+
+        for (let col = 0; col < 8; col++) {
+            for (let row = 0; row < 6; row++) {
+                if (blocks[row][col].style.backgroundColor === blocks[row + 1][col].style.backgroundColor &&
+                    blocks[row][col].style.backgroundColor === blocks[row + 2][col].style.backgroundColor) {
+                    matchFound = true;
+                    for (let i = 0; i < 3; i++) {
+                        blocks[row + i][col].style.backgroundColor = '#FFFFFF';
+                    }
+                    setTimeout(() => {
+                        for (let i = 0; i < 3; i++) {
+                            const randomColor = blockColors[Math.floor(Math.random() * blockColors.length)];
+                            blocks[row + i][col].style.backgroundColor = randomColor;
+                        }
+                    }, 500);
+                    score += pointsPerCombo * comboMultiplier;
+                    updateScore();
+                    comboMultiplier++;
+                }
+            }
+        }
+
+        return matchFound;
+    }
+
+    function updateScore() {
+        if (score < 0) {
+            score = 0;
+        }
+        document.getElementById('score').textContent = 'Score: ' + score;
+        if (score >= 100) {
+            pointsPerCombo = 20;
+        }
+        if (score >= 200) {
+            pointsPerCombo = 40;
+        }
+    }
+
+    createGameBoard();
+    updateScore();
+</script>
+
+</body>
+</html>
