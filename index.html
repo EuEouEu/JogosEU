@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tabulero</title>
+<style>
+    body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        background-color: #f3f3f3;
+    }
+
+    .container {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(8, 60px);
+        grid-template-rows: repeat(8, 60px);
+        gap: 5px;
+        border: 2px solid #aaa;
+        border-radius: 10px;
+        padding: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        background-color: #cdcdcd;
+    }
+    
+    .cell {
+        width: 60px;
+        height: 60px;
+        background-color: #CCC;
+        border-radius: 10px;
+        text-align: center;
+        font-size: 24px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .selected {
+        opacity: 0.7;
+    }
+
+    .blocked {
+        background-color: #000;
+        cursor: not-allowed;
+    }
+
+    #score {
+        position: absolute;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 24px;
+        color: rgb(0, 0, 0);
+        z-index: 1;
+    }
+</style>
+</head>
+<body>
+
+<div class="container" id="gameBoard">
+    <div id="score">Score: 0</div>
+</div>
+
+<script>
+    const candyColors = ['#FF6666', '#FFCC66', '#66FF66', '#66CCFF', '#FF66CC'];
+
+    let candies = [];
+    let previousColors = [];
+    let selectedCandy = null;
+    let score = 0;
+    const pointsPerCombo = 10;
+    const pointsLostPerMove = 10;
+
+    function createGameBoard() {
+        const gameBoard = document.getElementById('gameBoard');
+        for (let row = 0; row < 8; row++) {
+            candies[row] = [];
+            previousColors[row] = [];
+            for (let col = 0; col < 8; col++) {
+                const candy = document.createElement('div');
+                candy.className = 'cell';
+                if (Math.random() < 0.2) {
+                    candy.classList.add('blocked');
+                } else {
+                    candy.style.backgroundColor = candyColors[Math.floor(Math.random() * candyColors.length)];
+                }
+                candy.setAttribute('data-row', row);
+                candy.setAttribute('data-col', col);
+                if (!candy.classList.contains('blocked')) {
+                    candy.addEventListener('click', () => selectCandy(row, col));
+                }
+                candies[row][col] = candy;
+                previousColors[row][col] = candy.style.backgroundColor;
+                gameBoard.appendChild(candy);
+            }
+        }
+    }
+
+    function selectCandy(row, col) {
+        if (!selectedCandy) {
+            selectedCandy = { row, col };
+            candies[row][col].classList.add('selected');
+        } else {
+            if (Math.abs(selectedCandy.row - row) + Math.abs(selectedCandy.col - col) === 1) {
+                swapCandies(selectedCandy.row, selectedCandy.col, row, col);
+                if (!checkMatches()) {
+                    setTimeout(() => {
+                        swapCandies(selectedCandy.row, selectedCandy.col, row, col);
+                    }, 500);
+                    score -= pointsLostPerMove;
+                    updateScore();
+                }
+            }
+            candies[selectedCandy.row][selectedCandy.col].classList.remove('selected');
+            selectedCandy = null;
+        }
+    }
+
+    function swapCandies(row1, col1, row2, col2) {
+        const temp = candies[row1][col1].style.backgroundColor;
+        candies[row1][col1].style.backgroundColor = candies[row2][col2].style.backgroundColor;
+        candies[row2][col2].style.backgroundColor = temp;
+    }
+
+    function checkMatches() {
+        let matchFound = false;
+        
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 6; col++) {
+                if (candies[row][col].style.backgroundColor === candies[row][col + 1].style.backgroundColor &&
+                    candies[row][col].style.backgroundColor === candies[row][col + 2].style.backgroundColor) {
+                    matchFound = true;
+                    for (let i = 0; i < 3; i++) {
+                        candies[row][col + i].style.backgroundColor = '#FFFFFF';
+                    }
+                    setTimeout(() => {
+                        for (let i = 0; i < 3; i++) {
+                            const randomColor = candyColors[Math.floor(Math.random() * candyColors.length)];
+                            candies[row][col + i].style.backgroundColor = randomColor;
+                        }
+                    }, 500);
+                    score += pointsPerCombo;
+                    updateScore();
+                }
+            }
+        }
+
+        for (let col = 0; col < 8; col++) {
+            for (let row = 0; row < 6; row++) {
+                if (candies[row][col].style.backgroundColor === candies[row + 1][col].style.backgroundColor &&
+                    candies[row][col].style.backgroundColor === candies[row + 2][col].style.backgroundColor) {
+                    matchFound = true;
+                    for (let i = 0; i < 3; i++) {
+                        candies[row + i][col].style.backgroundColor = '#FFFFFF';
+                    }
+                    setTimeout(() => {
+                        for (let i = 0; i < 3; i++) {
+                            const randomColor = candyColors[Math.floor(Math.random() * candyColors.length)];
+                            candies[row + i][col].style.backgroundColor = randomColor;
+                        }
+                    }, 500);
+                    score += pointsPerCombo;
+                    updateScore();
+                }
+            }
+        }
+
+        return matchFound;
+    }
+
+    function updateScore() {
+        if (score < 0) {
+            score = 0;
+        }
+        document.getElementById('score').textContent = 'Score: ' + score;
+    }
+
+    createGameBoard();
+    updateScore();
+</script>
+
+</body>
+</html>
